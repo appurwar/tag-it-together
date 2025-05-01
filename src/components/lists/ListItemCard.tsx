@@ -25,8 +25,8 @@ const ListItemCard = ({ item, onClick, onToggleComplete }: ListItemCardProps) =>
             className="border-ios-blue"
           />
         </div>
-        <div className="flex-1" onClick={onClick}>
-          <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <div className="flex items-start justify-between mb-2" onClick={onClick}>
             <h3 className={`font-medium text-base ${item.completed ? "line-through text-gray-400" : ""}`}>
               {item.title}
             </h3>
@@ -35,27 +35,29 @@ const ListItemCard = ({ item, onClick, onToggleComplete }: ListItemCardProps) =>
             </div>
           </div>
           
-          {item.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
-          )}
+          <div onClick={onClick}>
+            {item.description && (
+              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+            )}
+            
+            {item.previewImage && (
+              <div className="mb-3 rounded-md overflow-hidden h-40">
+                <img 
+                  src={item.previewImage} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            
+            {item.location && (
+              <div className="text-xs text-gray-500 mb-2">📍 {item.location}</div>
+            )}
+          </div>
           
-          {item.previewImage && (
-            <div className="mb-3 rounded-md overflow-hidden h-40">
-              <img 
-                src={item.previewImage} 
-                alt={item.title} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          
-          {item.location && (
-            <div className="text-xs text-gray-500 mb-2">📍 {item.location}</div>
-          )}
-          
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1" onClick={e => e.stopPropagation()}>
             {item.tags.map((tag) => (
-              <TagBadge key={tag.id} tag={tag} />
+              <TagBadge key={tag.id} tag={tag} navigateOnClick={true} />
             ))}
           </div>
         </div>

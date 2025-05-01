@@ -70,8 +70,8 @@ const TagsPage = () => {
                   <div key={tag.id} className="flex items-center animate-fade-in">
                     <TagBadge 
                       tag={tag} 
-                      className="text-sm py-1.5" 
-                      onClick={() => {}}
+                      className="text-sm py-1.5"
+                      navigateOnClick={true}
                     />
                     <span className="ml-1 text-xs text-gray-500">
                       ({tag.count})
