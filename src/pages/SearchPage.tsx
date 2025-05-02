@@ -6,6 +6,7 @@ import SearchInput from "@/components/shared/SearchInput";
 import ListItemCard from "@/components/lists/ListItemCard";
 import { ListItem } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
+import { toast } from "sonner";
 
 // Mock data combining all list items
 const allMockItems: ListItem[] = [
@@ -112,6 +113,17 @@ const SearchPage = () => {
     setResults(filtered);
   };
 
+  // Add handlers for toggle complete and delete
+  const handleToggleComplete = (itemId: string) => {
+    // In a real app, this would call an API
+    toast.success("Item status updated");
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    // In a real app, this would call an API
+    toast.success("Item deleted");
+  };
+
   return (
     <div className="pb-16 h-screen bg-gray-50">
       <div className="px-4 pt-4 pb-2 bg-white fixed top-0 left-0 right-0 z-40 shadow-sm">
@@ -161,7 +173,8 @@ const SearchPage = () => {
                   key={item.id}
                   item={item}
                   onClick={() => {}}
-                  onToggleComplete={() => {}}
+                  onToggleComplete={() => handleToggleComplete(item.id)}
+                  onDelete={() => handleDeleteItem(item.id)}
                 />
               ))}
             </div>

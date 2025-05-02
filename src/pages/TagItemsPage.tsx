@@ -72,6 +72,18 @@ const TagItemsPage = () => {
     }
   }, [tagId]);
 
+  // Add handler for toggling completion status
+  const handleToggleComplete = (itemId: string) => {
+    setItems(items.map(item => 
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  // Add handler for deleting items
+  const handleDeleteItem = (itemId: string) => {
+    setItems(items.filter(item => item.id !== itemId));
+  };
+
   return (
     <div className="pb-16 h-screen bg-gray-50">
       <div className="px-4 pt-4 pb-2 bg-white fixed top-0 left-0 right-0 z-40 shadow-sm">
@@ -100,7 +112,8 @@ const TagItemsPage = () => {
                 key={item.id}
                 item={item}
                 onClick={() => {}}
-                onToggleComplete={() => {}}
+                onToggleComplete={() => handleToggleComplete(item.id)}
+                onDelete={() => handleDeleteItem(item.id)}
               />
             ))}
           </div>
