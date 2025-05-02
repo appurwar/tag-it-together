@@ -4,9 +4,29 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ListItem, Tag } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// Mock data of all existing tags for suggestions
+const mockAllTags: Tag[] = [
+  { id: "1", name: "Pizza" },
+  { id: "2", name: "Fast Food" },
+  { id: "3", name: "Japanese" },
+  { id: "4", name: "Sushi" },
+  { id: "5", name: "Burgers" },
+  { id: "6", name: "Mexican" },
+  { id: "7", name: "Mountains" },
+  { id: "8", name: "Moderate" },
+  { id: "9", name: "Fiction" },
+  { id: "10", name: "Classic" },
+  { id: "11", name: "Dystopian" },
+  { id: "12", name: "Sci-Fi" },
+  { id: "13", name: "Action" },
+  { id: "14", name: "Drama" }
+];
 
 interface AddEditListItemProps {
   isOpen: boolean;
@@ -22,17 +42,61 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const [location, setLocation] = useState(item?.location || "");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<Tag[]>(item?.tags || []);
+  const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([]);
+  const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+
+  // Reset form when opening for a new item or editing an existing one
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(item?.title || "");
+      setUrl(item?.url || "");
+      setDescription(item?.description || "");
+      setLocation(item?.location || "");
+      setTags(item?.tags || []);
+      setTagInput("");
+    }
+  }, [isOpen, item]);
+
+  // Filter tag suggestions based on input
+  useEffect(() => {
+    if (tagInput.trim()) {
+      const filtered = mockAllTags.filter(tag => 
+        tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+        !tags.some(existingTag => existingTag.id === tag.id)
+      );
+      setTagSuggestions(filtered);
+      
+      if (filtered.length > 0) {
+        setIsTagPopoverOpen(true);
+      }
+    } else {
+      setTagSuggestions([]);
+      setIsTagPopoverOpen(false);
+    }
+  }, [tagInput, tags]);
 
   const handleAddTag = () => {
     if (!tagInput.trim()) return;
     
-    const newTag: Tag = {
+    // Check if tag already exists in global tags
+    const existingTag = mockAllTags.find(
+      tag => tag.name.toLowerCase() === tagInput.toLowerCase()
+    );
+    
+    const newTag: Tag = existingTag || {
       id: Date.now().toString(),
       name: tagInput.trim(),
     };
     
     setTags([...tags, newTag]);
     setTagInput("");
+    setIsTagPopoverOpen(false);
+  };
+
+  const selectTagSuggestion = (tag: Tag) => {
+    setTags(prevTags => [...prevTags, tag]);
+    setTagInput("");
+    setIsTagPopoverOpen(false);
   };
 
   const removeTag = (tagId: string) => {
@@ -43,6 +107,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     if (!title.trim()) return;
     
     onSave({
+      id: item?.id,
       title,
       url,
       description,
@@ -50,6 +115,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       tags,
       completed: item?.completed || false,
       createdAt: item?.createdAt || new Date(),
+      previewImage: item?.previewImage,
     });
     
     onClose();
@@ -107,29 +173,53 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
           
           <div className="space-y-2">
             <Label htmlFor="tags">Tags</Label>
-            <div className="flex">
-              <Input 
-                id="tags" 
-                value={tagInput} 
-                onChange={(e) => setTagInput(e.target.value)} 
-                placeholder="Add a tag"
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag();
-                  }
-                }}
-              />
-              <Button 
-                type="button"
-                variant="secondary" 
-                onClick={handleAddTag}
-                className="ml-2"
-              >
-                Add
-              </Button>
-            </div>
+            <Popover open={isTagPopoverOpen && tagSuggestions.length > 0} onOpenChange={setIsTagPopoverOpen}>
+              <PopoverTrigger asChild>
+                <div className="flex">
+                  <Input 
+                    id="tags" 
+                    value={tagInput} 
+                    onChange={(e) => setTagInput(e.target.value)} 
+                    placeholder="Add a tag"
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                  />
+                  <Button 
+                    type="button"
+                    variant="secondary" 
+                    onClick={handleAddTag}
+                    className="ml-2"
+                  >
+                    Add
+                  </Button>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <Command>
+                  <CommandList>
+                    {tagSuggestions.length > 0 ? (
+                      <CommandGroup heading="Tag suggestions">
+                        {tagSuggestions.map((tag) => (
+                          <CommandItem
+                            key={tag.id}
+                            onSelect={() => selectTagSuggestion(tag)}
+                          >
+                            {tag.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    ) : (
+                      <CommandEmpty>No tags found.</CommandEmpty>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
@@ -137,7 +227,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                   <div key={tag.id} className="flex items-center">
                     <TagBadge tag={tag} />
                     <button
-                      className="ml-1 text-gray-400 hover:text-red-500"
+                      className="ml-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
                       onClick={() => removeTag(tag.id)}
                     >
                       ×

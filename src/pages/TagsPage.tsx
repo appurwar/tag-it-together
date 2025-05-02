@@ -1,94 +1,160 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import TabBar from "@/components/layout/TabBar";
 import SearchInput from "@/components/shared/SearchInput";
 import { Tag } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
+import FloatingActionButton from "@/components/shared/FloatingActionButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
-// Mock data
-const mockTags: Tag[] = [
-  { id: "1", name: "Pizza", count: 3 },
-  { id: "2", name: "Fast Food", count: 6 },
-  { id: "3", name: "Japanese", count: 2 },
-  { id: "4", name: "Sushi", count: 2 },
-  { id: "5", name: "Burgers", count: 4 },
-  { id: "6", name: "Mexican", count: 3 },
-  { id: "7", name: "Mountains", count: 5 },
-  { id: "8", name: "Moderate", count: 2 },
-  { id: "9", name: "Fiction", count: 8 },
-  { id: "10", name: "Sci-Fi", count: 4 },
-  { id: "11", name: "Mystery", count: 5 },
-  { id: "12", name: "Horror", count: 3 },
-  { id: "13", name: "Comedy", count: 6 },
-  { id: "14", name: "Action", count: 7 },
-  { id: "15", name: "Thriller", count: 3 },
-];
+// Collect all tags from all list items for accurate counts
+const collectAllTags = () => {
+  // This would typically come from an API
+  return [
+    { id: "1", name: "Pizza", count: 1 },
+    { id: "2", name: "Fast Food", count: 2 },
+    { id: "3", name: "Japanese", count: 1 },
+    { id: "4", name: "Sushi", count: 1 },
+    { id: "5", name: "Burgers", count: 1 },
+    { id: "6", name: "Mexican", count: 1 },
+    { id: "7", name: "Mountains", count: 1 },
+    { id: "8", name: "Moderate", count: 1 },
+    { id: "9", name: "Fiction", count: 2 },
+    { id: "10", name: "Classic", count: 1 },
+    { id: "11", name: "Dystopian", count: 1 },
+    { id: "12", name: "Sci-Fi", count: 1 },
+    { id: "13", name: "Action", count: 1 },
+    { id: "14", name: "Drama", count: 1 }
+  ];
+};
 
 const TagsPage = () => {
-  const [tags, setTags] = useState<Tag[]>(mockTags);
-  const [filteredTags, setFilteredTags] = useState<Tag[]>(mockTags);
+  const navigate = useNavigate();
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [filteredTags, setFilteredTags] = useState<Tag[]>([]);
+  const [isAddTagOpen, setIsAddTagOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
+  useEffect(() => {
+    const allTags = collectAllTags();
+    
+    // Sort tags alphabetically
+    const sortedTags = [...allTags].sort((a, b) => a.name.localeCompare(b.name));
+    
+    setTags(sortedTags);
+    setFilteredTags(sortedTags);
+  }, []);
+  
   const handleSearch = (query: string) => {
     if (!query) {
       setFilteredTags(tags);
       return;
     }
-
+    
     const filtered = tags.filter(tag => 
       tag.name.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredTags(filtered);
   };
 
-  // Group tags by first letter
-  const groupedTags = filteredTags.reduce<Record<string, Tag[]>>((groups, tag) => {
-    const firstLetter = tag.name.charAt(0).toUpperCase();
-    if (!groups[firstLetter]) {
-      groups[firstLetter] = [];
+  const handleAddTag = () => {
+    if (!newTagName.trim()) return;
+    
+    // Check if tag already exists
+    if (tags.some(tag => tag.name.toLowerCase() === newTagName.toLowerCase())) {
+      toast.error("This tag already exists");
+      return;
     }
-    groups[firstLetter].push(tag);
-    return groups;
-  }, {});
-
-  const sortedGroups = Object.keys(groupedTags).sort();
+    
+    const newTag: Tag = {
+      id: Date.now().toString(),
+      name: newTagName.trim(),
+      count: 0
+    };
+    
+    const updatedTags = [...tags, newTag].sort((a, b) => a.name.localeCompare(b.name));
+    setTags(updatedTags);
+    setFilteredTags(updatedTags);
+    setNewTagName("");
+    setIsAddTagOpen(false);
+    toast.success(`Tag "${newTagName}" created successfully`);
+  };
 
   return (
-    <div className="pb-16 h-screen bg-gray-50">
-      <div className="px-4 pt-4 pb-2 bg-white fixed top-0 left-0 right-0 z-40 shadow-sm">
+    <div className="pb-16 h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="px-4 pt-4 pb-2 bg-white dark:bg-gray-800 fixed top-0 left-0 right-0 z-40 shadow-sm">
+        <div className="flex items-center justify-center mb-2">
+          <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-100">LinkNest</h1>
+        </div>
         <SearchInput onSearch={handleSearch} placeholder="Search tags..." />
       </div>
 
-      <div className="mt-16 px-4">
-        <h1 className="text-2xl font-bold mb-6">Tags</h1>
-
-        {sortedGroups.length > 0 ? (
-          sortedGroups.map(letter => (
-            <div key={letter} className="mb-6">
-              <h2 className="text-lg font-medium text-gray-500 mb-3">{letter}</h2>
-              <div className="flex flex-wrap gap-2">
-                {groupedTags[letter].map(tag => (
-                  <div key={tag.id} className="flex items-center animate-fade-in">
-                    <TagBadge 
-                      tag={tag} 
-                      className="text-sm py-1.5"
-                      navigateOnClick={true}
-                    />
-                    <span className="ml-1 text-xs text-gray-500">
-                      ({tag.count})
-                    </span>
+      <div className="mt-16 px-4 py-4">
+        {filteredTags.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            {filteredTags.map((tag) => (
+              <div 
+                key={tag.id} 
+                className="flex flex-col items-center"
+                onClick={() => navigate(`/tags/${tag.id}`)}
+              >
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm w-full">
+                  <TagBadge 
+                    tag={tag} 
+                    className="text-center w-full justify-center text-sm py-1.5"
+                    navigateOnClick={true}
+                  />
+                  <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+                    {tag.count} {tag.count === 1 ? "item" : "items"}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
-          <div className="text-center py-10 text-gray-500">
+          <div className="text-center py-10 text-gray-500 dark:text-gray-400">
             <p>No tags found</p>
           </div>
         )}
       </div>
 
+      <FloatingActionButton onClick={() => setIsAddTagOpen(true)} />
       <TabBar />
+
+      {/* Add Tag Dialog */}
+      <Dialog open={isAddTagOpen} onOpenChange={setIsAddTagOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Tag</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="tagName">Tag Name</Label>
+            <Input
+              id="tagName"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              placeholder="Enter tag name"
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddTag();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddTagOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddTag}>Create Tag</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

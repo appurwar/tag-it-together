@@ -9,6 +9,7 @@ import AddEditListItem from "@/components/lists/AddEditListItem";
 import { List, ListItem } from "@/lib/types";
 import { ArrowLeft, MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -41,6 +42,20 @@ const mockLists: List[] = [
     itemCount: 3,
     icon: "🥾",
     lastModified: new Date(2023, 5, 2)
+  },
+  {
+    id: "3",
+    name: "Books to Read",
+    itemCount: 12,
+    icon: "📚",
+    lastModified: new Date(2023, 4, 28)
+  },
+  {
+    id: "4",
+    name: "Movies to Watch",
+    itemCount: 8,
+    icon: "🎬",
+    lastModified: new Date(2023, 5, 1)
   }
 ];
 
@@ -93,6 +108,42 @@ const mockItems: Record<string, ListItem[]> = {
       createdAt: new Date(2023, 4, 20),
       previewImage: "https://source.unsplash.com/random/300x200?mountain"
     }
+  ],
+  "3": [
+    {
+      id: "301",
+      title: "The Great Gatsby",
+      description: "Classic novel by F. Scott Fitzgerald",
+      tags: [{ id: "9", name: "Fiction" }, { id: "10", name: "Classic" }],
+      completed: false,
+      createdAt: new Date(2023, 4, 15)
+    },
+    {
+      id: "302",
+      title: "1984",
+      description: "Dystopian novel by George Orwell",
+      tags: [{ id: "9", name: "Fiction" }, { id: "11", name: "Dystopian" }],
+      completed: false,
+      createdAt: new Date(2023, 4, 10)
+    }
+  ],
+  "4": [
+    {
+      id: "401",
+      title: "Inception",
+      description: "Mind-bending sci-fi movie",
+      tags: [{ id: "12", name: "Sci-Fi" }, { id: "13", name: "Action" }],
+      completed: false,
+      createdAt: new Date(2023, 4, 22)
+    },
+    {
+      id: "402",
+      title: "The Shawshank Redemption",
+      description: "Classic prison drama",
+      tags: [{ id: "14", name: "Drama" }],
+      completed: false,
+      createdAt: new Date(2023, 4, 18)
+    }
   ]
 };
 
@@ -106,7 +157,11 @@ const ListDetailPage = () => {
   const [activeItems, setActiveItems] = useState<ListItem[]>([]);
   const [completedItems, setCompletedItems] = useState<ListItem[]>([]);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ListItem | null>(null);
+  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleteItemModalOpen, setIsDeleteItemModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<ListItem | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
   
   useEffect(() => {
@@ -115,10 +170,15 @@ const ListDetailPage = () => {
     // Find the list in mock data
     const foundList = mockLists.find(l => l.id === listId);
     if (foundList) {
-      setList(foundList);
+      // Update the itemCount to reflect actual items
+      const listItems = mockItems[listId] || [];
+      const updatedList = {
+        ...foundList,
+        itemCount: listItems.length
+      };
+      setList(updatedList);
       
       // Load list items
-      const listItems = mockItems[listId] || [];
       setItems(listItems);
       setFilteredItems(listItems);
       
@@ -153,6 +213,7 @@ const ListDetailPage = () => {
   
   const handleDeleteList = () => {
     // In a real app, delete from API
+    toast.success(`"${list?.name}" list deleted`);
     navigate("/lists");
   };
   
@@ -174,8 +235,8 @@ const ListDetailPage = () => {
     // Create or update item
     if (!listId) return;
     
-    const isNewItem = !newItem.id;
     let updatedItems;
+    const isNewItem = !newItem.id;
     
     if (isNewItem) {
       const item: ListItem = {
@@ -190,21 +251,61 @@ const ListDetailPage = () => {
       };
       
       updatedItems = [item, ...items];
+      toast.success("Item added successfully");
     } else {
       updatedItems = items.map(item => 
         item.id === newItem.id ? { ...item, ...newItem } : item
       );
+      toast.success("Item updated successfully");
     }
     
     setItems(updatedItems);
     setFilteredItems(updatedItems);
     setActiveItems(updatedItems.filter(item => !item.completed));
     setCompletedItems(updatedItems.filter(item => item.completed));
+    
+    // Update list itemCount
+    if (list && isNewItem) {
+      setList({
+        ...list,
+        itemCount: list.itemCount + 1,
+        lastModified: new Date()
+      });
+    }
+  };
+  
+  const handleDeleteItem = () => {
+    if (!itemToDelete) return;
+    
+    const updatedItems = items.filter(item => item.id !== itemToDelete.id);
+    
+    setItems(updatedItems);
+    setFilteredItems(updatedItems);
+    setActiveItems(updatedItems.filter(item => !item.completed));
+    setCompletedItems(updatedItems.filter(item => item.completed));
+    
+    // Update list itemCount
+    if (list) {
+      setList({
+        ...list,
+        itemCount: list.itemCount - 1,
+        lastModified: new Date()
+      });
+    }
+    
+    setIsDeleteItemModalOpen(false);
+    setItemToDelete(null);
+    toast.success("Item deleted successfully");
+  };
+  
+  const handleEditItem = (item: ListItem) => {
+    setEditingItem(item);
+    setIsEditItemOpen(true);
   };
   
   return (
-    <div className="pb-16 h-screen bg-gray-50">
-      <div className="px-4 pt-4 pb-2 bg-white fixed top-0 left-0 right-0 z-40 shadow-sm">
+    <div className="pb-16 h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="px-4 pt-4 pb-2 bg-white dark:bg-gray-800 fixed top-0 left-0 right-0 z-40 shadow-sm">
         <div className="flex items-center mb-2">
           <Button 
             variant="ghost" 
@@ -214,7 +315,7 @@ const ListDetailPage = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold flex-1 text-left">
+          <h1 className="text-xl font-bold flex-1 text-left dark:text-white">
             {list?.icon && <span className="mr-2">{list.icon}</span>}
             {list?.name}
           </h1>
@@ -227,7 +328,7 @@ const ListDetailPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Edit List</DropdownMenuItem>
               <DropdownMenuItem
-                className="text-red-500"
+                className="text-red-500 dark:text-red-400"
                 onClick={() => setIsDeleteModalOpen(true)}
               >
                 Delete List
@@ -245,13 +346,17 @@ const ListDetailPage = () => {
               <ListItemCard
                 key={item.id}
                 item={item}
-                onClick={() => {}}
+                onClick={() => handleEditItem(item)}
                 onToggleComplete={() => handleToggleComplete(item.id)}
+                onDelete={() => {
+                  setItemToDelete(item);
+                  setIsDeleteItemModalOpen(true);
+                }}
               />
             ))}
           </div>
         ) : (
-          <div className="text-center py-10 text-gray-500">
+          <div className="text-center py-10 text-gray-500 dark:text-gray-400">
             <p>No active items</p>
           </div>
         )}
@@ -262,7 +367,7 @@ const ListDetailPage = () => {
               className="flex items-center justify-between mb-2 cursor-pointer"
               onClick={() => setShowCompleted(!showCompleted)}
             >
-              <h2 className="text-lg font-medium text-gray-500">
+              <h2 className="text-lg font-medium text-gray-500 dark:text-gray-400">
                 Completed ({completedItems.length})
               </h2>
               <Button variant="ghost" size="sm">
@@ -280,8 +385,12 @@ const ListDetailPage = () => {
                   <ListItemCard
                     key={item.id}
                     item={item}
-                    onClick={() => {}}
+                    onClick={() => handleEditItem(item)}
                     onToggleComplete={() => handleToggleComplete(item.id)}
+                    onDelete={() => {
+                      setItemToDelete(item);
+                      setIsDeleteItemModalOpen(true);
+                    }}
                   />
                 ))}
               </div>
@@ -298,6 +407,16 @@ const ListDetailPage = () => {
         onClose={() => setIsAddItemOpen(false)}
         onSave={handleSaveItem}
       />
+      
+      <AddEditListItem
+        isOpen={isEditItemOpen}
+        onClose={() => {
+          setIsEditItemOpen(false);
+          setEditingItem(null);
+        }}
+        onSave={handleSaveItem}
+        item={editingItem || undefined}
+      />
 
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent>
@@ -310,7 +429,25 @@ const ListDetailPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteList} className="bg-red-500 hover:bg-red-600">
+            <AlertDialogAction onClick={handleDeleteList} className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={isDeleteItemModalOpen} onOpenChange={setIsDeleteItemModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{itemToDelete?.title}"?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteItem} className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
