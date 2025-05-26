@@ -21,35 +21,35 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import { SortableContext, arrayMove, rectSwappingStrategy } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 
-// Mock data
+// Mock data - updated with current dates
 const mockLists: List[] = [
   {
     id: "1",
     name: "Places to Eat",
     itemCount: 5,
     icon: "🍕",
-    lastModified: new Date(2023, 4, 15)
+    lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
   },
   {
     id: "2",
-    name: "Hikes to Do",
+    name: "Hikes to Do", 
     itemCount: 3,
     icon: "🥾",
-    lastModified: new Date(2023, 5, 2)
+    lastModified: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
   },
   {
     id: "3",
     name: "Books to Read",
     itemCount: 12,
     icon: "📚",
-    lastModified: new Date(2023, 4, 28)
+    lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
   },
   {
     id: "4",
     name: "Movies to Watch",
     itemCount: 8,
     icon: "🎬",
-    lastModified: new Date(2023, 5, 1)
+    lastModified: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
   }
 ];
 
