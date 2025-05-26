@@ -21,48 +21,82 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import { SortableContext, arrayMove, rectSwappingStrategy } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 
-// Mock data - updated with current dates
-const mockLists: List[] = [
-  {
-    id: "1",
-    name: "Places to Eat",
-    itemCount: 5,
-    icon: "🍕",
-    lastModified: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-  },
-  {
-    id: "2",
-    name: "Hikes to Do", 
-    itemCount: 3,
-    icon: "🥾",
-    lastModified: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
-  },
-  {
-    id: "3",
-    name: "Books to Read",
-    itemCount: 12,
-    icon: "📚",
-    lastModified: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
-  },
-  {
-    id: "4",
-    name: "Movies to Watch",
-    itemCount: 8,
-    icon: "🎬",
-    lastModified: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
+// Helper functions for localStorage persistence
+const LISTS_STORAGE_KEY = 'linknest_lists';
+
+const getStoredLists = (): List[] => {
+  try {
+    const stored = localStorage.getItem(LISTS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convert date strings back to Date objects
+      return parsed.map((list: any) => ({
+        ...list,
+        lastModified: new Date(list.lastModified)
+      }));
+    }
+  } catch (error) {
+    console.error('Error loading lists from storage:', error);
   }
-];
+  
+  // Return default lists if nothing stored
+  return [
+    {
+      id: "1",
+      name: "Places to Eat",
+      itemCount: 5,
+      icon: "🍕",
+      lastModified: new Date()
+    },
+    {
+      id: "2",
+      name: "Hikes to Do", 
+      itemCount: 3,
+      icon: "🥾",
+      lastModified: new Date()
+    },
+    {
+      id: "3",
+      name: "Books to Read",
+      itemCount: 12,
+      icon: "📚",
+      lastModified: new Date()
+    },
+    {
+      id: "4",
+      name: "Movies to Watch",
+      itemCount: 8,
+      icon: "🎬",
+      lastModified: new Date()
+    }
+  ];
+};
+
+const storeLists = (lists: List[]) => {
+  try {
+    localStorage.setItem(LISTS_STORAGE_KEY, JSON.stringify(lists));
+  } catch (error) {
+    console.error('Error saving lists to storage:', error);
+  }
+};
 
 const ListsPage = () => {
   const navigate = useNavigate();
-  const [lists, setLists] = useState<List[]>(mockLists);
-  const [filteredLists, setFilteredLists] = useState<List[]>(mockLists);
+  const [lists, setLists] = useState<List[]>([]);
+  const [filteredLists, setFilteredLists] = useState<List[]>([]);
   const [isAddListOpen, setIsAddListOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("lastModified");
   const [editingList, setEditingList] = useState<List | null>(null);
   const [isEditListOpen, setIsEditListOpen] = useState(false);
   const [isDeleteListConfirmOpen, setIsDeleteListConfirmOpen] = useState(false);
+
+  // Load lists from localStorage on component mount
+  useEffect(() => {
+    const storedLists = getStoredLists();
+    setLists(storedLists);
+    setFilteredLists(storedLists);
+  }, []);
 
   // Configure dnd-kit sensors for drag and drop with a delay for long press
   const sensors = useSensors(
@@ -73,6 +107,12 @@ const ListsPage = () => {
       },
     })
   );
+
+  const updateLists = (newLists: List[]) => {
+    setLists(newLists);
+    setFilteredLists(newLists);
+    storeLists(newLists);
+  };
 
   const handleSearch = (query: string) => {
     if (!query) {
@@ -110,8 +150,7 @@ const ListsPage = () => {
     };
     
     const updatedLists = [newList, ...lists];
-    setLists(updatedLists);
-    setFilteredLists(updatedLists);
+    updateLists(updatedLists);
     setNewListName("");
     setIsAddListOpen(false);
     toast.success(`List "${newListName}" created successfully`);
@@ -126,8 +165,7 @@ const ListsPage = () => {
         : list
     );
 
-    setLists(updatedLists);
-    setFilteredLists(updatedLists);
+    updateLists(updatedLists);
     setIsEditListOpen(false);
     setEditingList(null);
     toast.success("List updated successfully");
@@ -137,8 +175,7 @@ const ListsPage = () => {
     if (!editingList) return;
 
     const updatedLists = lists.filter(list => list.id !== editingList.id);
-    setLists(updatedLists);
-    setFilteredLists(updatedLists);
+    updateLists(updatedLists);
     setIsDeleteListConfirmOpen(false);
     setEditingList(null);
     toast.success(`"${editingList.name}" deleted`);
@@ -159,7 +196,7 @@ const ListsPage = () => {
       // If we're in custom sort mode, update the main list array too
       if (sortOption === "custom") {
         const reorderedMain = arrayMove(lists, oldIndex, newIndex);
-        setLists(reorderedMain);
+        updateLists(reorderedMain);
       } else {
         // Auto-switch to custom sort when user manually rearranges
         setSortOption("custom");
@@ -257,6 +294,11 @@ const ListsPage = () => {
               onChange={(e) => setNewListName(e.target.value)}
               placeholder="Enter list name"
               className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddList();
+                }
+              }}
             />
           </div>
           <DialogFooter>

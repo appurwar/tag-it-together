@@ -42,7 +42,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const [location, setLocation] = useState(item?.location || "");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<Tag[]>(item?.tags || []);
-  const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Reset form when opening for a new item or editing an existing one
   useEffect(() => {
@@ -53,7 +53,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       setLocation(item?.location || "");
       setTags(item?.tags || []);
       setTagInput("");
-      setIsTagPopoverOpen(false);
+      setShowSuggestions(false);
     }
   }, [isOpen, item]);
 
@@ -73,7 +73,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     // Check if tag already exists in current tags
     if (tags.some(tag => tag.name.toLowerCase() === tagInput.toLowerCase())) {
       setTagInput("");
-      setIsTagPopoverOpen(false);
+      setShowSuggestions(false);
       return;
     }
     
@@ -89,7 +89,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     
     setTags([...tags, newTag]);
     setTagInput("");
-    setIsTagPopoverOpen(false);
+    setShowSuggestions(false);
   };
 
   const selectTagSuggestion = (tag: Tag) => {
@@ -97,7 +97,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       setTags(prevTags => [...prevTags, tag]);
     }
     setTagInput("");
-    setIsTagPopoverOpen(false);
+    setShowSuggestions(false);
   };
 
   const removeTag = (tagId: string) => {
@@ -122,17 +122,10 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     onClose();
   };
 
-  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleTagInputChange = (value: string) => {
     setTagInput(value);
-    
-    // Open popover if there are suggestions
-    const suggestions = mockAllTags.filter(tag => 
-      tag.name.toLowerCase().includes(value.toLowerCase()) &&
-      !tags.some(existingTag => existingTag.id === tag.id)
-    );
-    
-    setIsTagPopoverOpen(value.trim().length > 0 && suggestions.length > 0);
+    const suggestions = getFilteredSuggestions();
+    setShowSuggestions(value.trim().length > 0 && suggestions.length > 0);
   };
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -140,7 +133,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       e.preventDefault();
       handleAddTag();
     } else if (e.key === 'Escape') {
-      setIsTagPopoverOpen(false);
+      setShowSuggestions(false);
     }
   };
 
@@ -199,14 +192,19 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
           <div className="space-y-2">
             <Label htmlFor="tags">Tags</Label>
             <div className="relative">
-              <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
+              <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
                 <PopoverTrigger asChild>
                   <div className="flex">
                     <Input 
                       id="tags" 
                       value={tagInput} 
-                      onChange={handleTagInputChange}
+                      onChange={(e) => handleTagInputChange(e.target.value)}
                       onKeyDown={handleTagInputKeyDown}
+                      onFocus={() => {
+                        if (tagInput.trim() && filteredSuggestions.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
                       placeholder="Add a tag"
                       className="flex-1"
                     />
@@ -220,10 +218,10 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                     </Button>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 w-full" align="start">
-                  <Command>
-                    <CommandList>
-                      {filteredSuggestions.length > 0 ? (
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <PopoverContent className="p-0 w-full" align="start">
+                    <Command>
+                      <CommandList>
                         <CommandGroup heading="Tag suggestions">
                           {filteredSuggestions.map((tag) => (
                             <CommandItem
@@ -235,12 +233,10 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                             </CommandItem>
                           ))}
                         </CommandGroup>
-                      ) : (
-                        <CommandEmpty>No matching tags found.</CommandEmpty>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                )}
               </Popover>
             </div>
             

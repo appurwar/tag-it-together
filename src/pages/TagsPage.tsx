@@ -12,9 +12,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-// Collect all tags from all list items for accurate counts
-const collectAllTags = () => {
-  // This would typically come from an API
+// Helper functions for localStorage persistence
+const TAGS_STORAGE_KEY = 'linknest_tags';
+
+const getStoredTags = (): Tag[] => {
+  try {
+    const stored = localStorage.getItem(TAGS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading tags from storage:', error);
+  }
+  
+  // Return default tags if nothing stored
   return [
     { id: "1", name: "Pizza", count: 1 },
     { id: "2", name: "Fast Food", count: 2 },
@@ -33,6 +44,14 @@ const collectAllTags = () => {
   ];
 };
 
+const storeTags = (tags: Tag[]) => {
+  try {
+    localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+  } catch (error) {
+    console.error('Error saving tags to storage:', error);
+  }
+};
+
 const TagsPage = () => {
   const navigate = useNavigate();
   const [tags, setTags] = useState<Tag[]>([]);
@@ -41,14 +60,20 @@ const TagsPage = () => {
   const [newTagName, setNewTagName] = useState("");
 
   useEffect(() => {
-    const allTags = collectAllTags();
+    const storedTags = getStoredTags();
     
     // Sort tags alphabetically
-    const sortedTags = [...allTags].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedTags = [...storedTags].sort((a, b) => a.name.localeCompare(b.name));
     
     setTags(sortedTags);
     setFilteredTags(sortedTags);
   }, []);
+
+  const updateTags = (newTags: Tag[]) => {
+    setTags(newTags);
+    setFilteredTags(newTags);
+    storeTags(newTags);
+  };
   
   const handleSearch = (query: string) => {
     if (!query) {
@@ -78,8 +103,7 @@ const TagsPage = () => {
     };
     
     const updatedTags = [...tags, newTag].sort((a, b) => a.name.localeCompare(b.name));
-    setTags(updatedTags);
-    setFilteredTags(updatedTags);
+    updateTags(updatedTags);
     setNewTagName("");
     setIsAddTagOpen(false);
     toast.success(`Tag "${newTagName}" created successfully`);
