@@ -66,6 +66,9 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
         !tags.some(existingTag => existingTag.id === tag.id)
       );
       setTagSuggestions(filtered);
+      if (filtered.length > 0) {
+        setIsTagPopoverOpen(true);
+      }
     } else {
       setTagSuggestions([]);
       setIsTagPopoverOpen(false);
@@ -78,6 +81,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     // Check if tag already exists in current tags
     if (tags.some(tag => tag.name.toLowerCase() === tagInput.toLowerCase())) {
       setTagInput("");
+      setIsTagPopoverOpen(false);
       return;
     }
     
@@ -124,6 +128,20 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     });
     
     onClose();
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTagInput(value);
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    } else if (e.key === 'Escape') {
+      setIsTagPopoverOpen(false);
+    }
   };
 
   return (
@@ -179,24 +197,19 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
           <div className="space-y-2">
             <Label htmlFor="tags">Tags</Label>
             <div className="relative">
-              <Popover open={isTagPopoverOpen && tagSuggestions.length > 0} onOpenChange={setIsTagPopoverOpen}>
+              <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
                 <PopoverTrigger asChild>
                   <div className="flex">
                     <Input 
                       id="tags" 
                       value={tagInput} 
-                      onChange={(e) => {
-                        setTagInput(e.target.value);
-                        if (e.target.value.trim()) {
-                          setIsTagPopoverOpen(true);
-                        }
-                      }}
+                      onChange={handleTagInputChange}
+                      onKeyDown={handleTagInputKeyDown}
                       placeholder="Add a tag"
                       className="flex-1"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddTag();
+                      onFocus={() => {
+                        if (tagInput.trim() && tagSuggestions.length > 0) {
+                          setIsTagPopoverOpen(true);
                         }
                       }}
                     />
