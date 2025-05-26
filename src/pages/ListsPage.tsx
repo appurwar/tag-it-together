@@ -28,28 +28,28 @@ const mockLists: List[] = [
     name: "Places to Eat",
     itemCount: 5,
     icon: "🍕",
-    lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
+    lastModified: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
   },
   {
     id: "2",
     name: "Hikes to Do", 
     itemCount: 3,
     icon: "🥾",
-    lastModified: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
+    lastModified: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
   },
   {
     id: "3",
     name: "Books to Read",
     itemCount: 12,
     icon: "📚",
-    lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
+    lastModified: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
   },
   {
     id: "4",
     name: "Movies to Watch",
     itemCount: 8,
     icon: "🎬",
-    lastModified: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
+    lastModified: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
   }
 ];
 

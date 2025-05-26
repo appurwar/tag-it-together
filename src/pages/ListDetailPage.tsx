@@ -68,7 +68,7 @@ const mockItems: Record<string, ListItem[]> = {
       tags: [{ id: "1", name: "Pizza" }, { id: "2", name: "Fast Food" }],
       location: "Downtown",
       completed: false,
-      createdAt: new Date(2023, 4, 10),
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
       previewImage: "https://source.unsplash.com/random/300x200?pizza"
     },
     {
@@ -78,7 +78,7 @@ const mockItems: Record<string, ListItem[]> = {
       tags: [{ id: "3", name: "Japanese" }, { id: "4", name: "Sushi" }],
       location: "Midtown",
       completed: false,
-      createdAt: new Date(2023, 4, 12)
+      createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
     },
     {
       id: "103",
@@ -86,7 +86,7 @@ const mockItems: Record<string, ListItem[]> = {
       description: "Best burgers in town",
       tags: [{ id: "5", name: "Burgers" }, { id: "2", name: "Fast Food" }],
       completed: true,
-      createdAt: new Date(2023, 3, 28)
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
     },
     {
       id: "104",
@@ -94,7 +94,7 @@ const mockItems: Record<string, ListItem[]> = {
       tags: [{ id: "6", name: "Mexican" }],
       location: "South Side",
       completed: true,
-      createdAt: new Date(2023, 4, 5)
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
     }
   ],
   "2": [
@@ -105,7 +105,7 @@ const mockItems: Record<string, ListItem[]> = {
       tags: [{ id: "7", name: "Mountains" }, { id: "8", name: "Moderate" }],
       location: "Rocky Mountain Park",
       completed: false,
-      createdAt: new Date(2023, 4, 20),
+      createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
       previewImage: "https://source.unsplash.com/random/300x200?mountain"
     }
   ],
@@ -116,7 +116,7 @@ const mockItems: Record<string, ListItem[]> = {
       description: "Classic novel by F. Scott Fitzgerald",
       tags: [{ id: "9", name: "Fiction" }, { id: "10", name: "Classic" }],
       completed: false,
-      createdAt: new Date(2023, 4, 15)
+      createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000) // 18 hours ago
     },
     {
       id: "302",
@@ -124,7 +124,7 @@ const mockItems: Record<string, ListItem[]> = {
       description: "Dystopian novel by George Orwell",
       tags: [{ id: "9", name: "Fiction" }, { id: "11", name: "Dystopian" }],
       completed: false,
-      createdAt: new Date(2023, 4, 10)
+      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) // 4 days ago
     }
   ],
   "4": [
@@ -134,7 +134,7 @@ const mockItems: Record<string, ListItem[]> = {
       description: "Mind-bending sci-fi movie",
       tags: [{ id: "12", name: "Sci-Fi" }, { id: "13", name: "Action" }],
       completed: false,
-      createdAt: new Date(2023, 4, 22)
+      createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000) // 8 hours ago
     },
     {
       id: "402",
@@ -142,7 +142,7 @@ const mockItems: Record<string, ListItem[]> = {
       description: "Classic prison drama",
       tags: [{ id: "14", name: "Drama" }],
       completed: false,
-      createdAt: new Date(2023, 4, 18)
+      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
     }
   ]
 };

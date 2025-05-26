@@ -42,7 +42,6 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const [location, setLocation] = useState(item?.location || "");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<Tag[]>(item?.tags || []);
-  const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([]);
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
 
   // Reset form when opening for a new item or editing an existing one
@@ -58,22 +57,15 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     }
   }, [isOpen, item]);
 
-  // Filter tag suggestions based on input
-  useEffect(() => {
-    if (tagInput.trim()) {
-      const filtered = mockAllTags.filter(tag => 
-        tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-        !tags.some(existingTag => existingTag.id === tag.id)
-      );
-      setTagSuggestions(filtered);
-      if (filtered.length > 0) {
-        setIsTagPopoverOpen(true);
-      }
-    } else {
-      setTagSuggestions([]);
-      setIsTagPopoverOpen(false);
-    }
-  }, [tagInput, tags]);
+  // Get filtered tag suggestions
+  const getFilteredSuggestions = () => {
+    if (!tagInput.trim()) return [];
+    
+    return mockAllTags.filter(tag => 
+      tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
+      !tags.some(existingTag => existingTag.id === tag.id)
+    );
+  };
 
   const handleAddTag = () => {
     if (!tagInput.trim()) return;
@@ -133,6 +125,14 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setTagInput(value);
+    
+    // Open popover if there are suggestions
+    const suggestions = mockAllTags.filter(tag => 
+      tag.name.toLowerCase().includes(value.toLowerCase()) &&
+      !tags.some(existingTag => existingTag.id === tag.id)
+    );
+    
+    setIsTagPopoverOpen(value.trim().length > 0 && suggestions.length > 0);
   };
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -143,6 +143,8 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       setIsTagPopoverOpen(false);
     }
   };
+
+  const filteredSuggestions = getFilteredSuggestions();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -207,11 +209,6 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                       onKeyDown={handleTagInputKeyDown}
                       placeholder="Add a tag"
                       className="flex-1"
-                      onFocus={() => {
-                        if (tagInput.trim() && tagSuggestions.length > 0) {
-                          setIsTagPopoverOpen(true);
-                        }
-                      }}
                     />
                     <Button 
                       type="button"
@@ -226,9 +223,9 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                 <PopoverContent className="p-0 w-full" align="start">
                   <Command>
                     <CommandList>
-                      {tagSuggestions.length > 0 ? (
+                      {filteredSuggestions.length > 0 ? (
                         <CommandGroup heading="Tag suggestions">
-                          {tagSuggestions.map((tag) => (
+                          {filteredSuggestions.map((tag) => (
                             <CommandItem
                               key={tag.id}
                               onSelect={() => selectTagSuggestion(tag)}
