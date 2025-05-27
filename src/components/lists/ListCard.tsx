@@ -18,9 +18,10 @@ interface ListCardProps {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdateThumbnail: () => void;
 }
 
-const ListCard = ({ list, onClick, onEdit, onDelete }: ListCardProps) => {
+const ListCard = ({ list, onClick, onEdit, onDelete, onUpdateThumbnail }: ListCardProps) => {
   const { 
     attributes, 
     listeners, 
@@ -43,12 +44,33 @@ const ListCard = ({ list, onClick, onEdit, onDelete }: ListCardProps) => {
             onClick={onClick}
           >
             {list.previewImage ? (
-              <div className="h-20 w-full rounded-md overflow-hidden mb-2">
+              <div className="h-20 w-full rounded-md overflow-hidden mb-2 relative">
                 <img 
                   src={list.previewImage} 
                   alt={list.name}
                   className="w-full h-full object-cover"
                 />
+                <div className="absolute top-2 right-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <MoreVertical className="h-5 w-5 text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-70" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onUpdateThumbnail(); }}>
+                        Update Thumbnail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-red-500 dark:text-red-400"
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             ) : (
               <div className="flex items-start justify-between w-full">
@@ -62,6 +84,9 @@ const ListCard = ({ list, onClick, onEdit, onDelete }: ListCardProps) => {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                       Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onUpdateThumbnail(); }}>
+                      Update Thumbnail
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="text-red-500 dark:text-red-400"
@@ -87,6 +112,7 @@ const ListCard = ({ list, onClick, onEdit, onDelete }: ListCardProps) => {
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={onEdit}>Edit</ContextMenuItem>
+        <ContextMenuItem onClick={onUpdateThumbnail}>Update Thumbnail</ContextMenuItem>
         <ContextMenuItem className="text-red-500 dark:text-red-400" onClick={onDelete}>Delete</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

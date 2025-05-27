@@ -165,7 +165,7 @@ const ListsPage = () => {
         <SearchInput onSearch={handleSearch} placeholder="Search lists..." />
       </div>
 
-      <div className="mt-16 px-4">
+      <div className="mt-20 px-4">
         <div className="flex items-center justify-between mb-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -216,6 +216,10 @@ const ListsPage = () => {
                     onDelete={() => {
                       setEditingList(list);
                       setIsDeleteListConfirmOpen(true);
+                    }}
+                    onUpdateThumbnail={() => {
+                      setEditingList(list);
+                      setIsImageUploadOpen(true);
                     }}
                   />
                 ))

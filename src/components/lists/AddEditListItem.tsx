@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ListItem, Tag } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
-import { getAllTags, createTag } from "@/lib/dataManager";
+import { getAllTags, createTag, extractPlaceFromGoogleMapsUrl } from "@/lib/dataManager";
+import { toast } from "sonner";
 
 interface AddEditListItemProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const [suggestions, setSuggestions] = useState<Tag[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [isProcessingUrl, setIsProcessingUrl] = useState(false);
 
   // Reset form when opening for a new item or editing an existing one
   useEffect(() => {
@@ -37,6 +39,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       setTags(item?.tags || []);
       setTagInput("");
       setShowSuggestions(false);
+      setIsProcessingUrl(false);
       
       // Load all available tags
       const availableTags = getAllTags();
@@ -44,43 +47,82 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     }
   }, [isOpen, item]);
 
-  // Update suggestions when tag input changes
-  useEffect(() => {
-    if (!tagInput.trim()) {
+  // Debounced suggestion update to prevent freezing
+  const updateSuggestions = useCallback((input: string) => {
+    if (!input.trim()) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
-    const filtered = allTags.filter(tag => 
-      tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
-      !tags.some(existingTag => existingTag.id === tag.id)
-    );
+    // Limit suggestions to prevent performance issues
+    const filtered = allTags
+      .filter(tag => 
+        tag.name.toLowerCase().includes(input.toLowerCase()) &&
+        !tags.some(existingTag => existingTag.id === tag.id)
+      )
+      .slice(0, 5); // Limit to 5 suggestions
     
     setSuggestions(filtered);
     setShowSuggestions(filtered.length > 0);
-  }, [tagInput, allTags, tags]);
+  }, [allTags, tags]);
+
+  // Update suggestions when tag input changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      updateSuggestions(tagInput);
+    }, 200); // Debounce by 200ms
+
+    return () => clearTimeout(timeoutId);
+  }, [tagInput, updateSuggestions]);
+
+  // Handle URL processing for Google Maps
+  const handleUrlChange = async (newUrl: string) => {
+    setUrl(newUrl);
+    
+    if (newUrl && newUrl.includes('maps.google') && !isProcessingUrl) {
+      setIsProcessingUrl(true);
+      try {
+        const placeData = await extractPlaceFromGoogleMapsUrl(newUrl);
+        if (placeData) {
+          if (placeData.title && !title) setTitle(placeData.title);
+          if (placeData.location && !location) setLocation(placeData.location);
+          if (placeData.description && !description) setDescription(placeData.description);
+          if (placeData.tags && placeData.tags.length > 0) {
+            setTags(prev => [...prev, ...placeData.tags!.filter(newTag => 
+              !prev.some(existingTag => existingTag.id === newTag.id)
+            )]);
+          }
+          toast.success("Place information imported from Google Maps");
+        }
+      } catch (error) {
+        console.error('Error processing Google Maps URL:', error);
+        toast.error("Failed to import place information");
+      } finally {
+        setIsProcessingUrl(false);
+      }
+    }
+  };
 
   const handleAddTag = () => {
-    if (!tagInput.trim()) return;
+    const trimmedInput = tagInput.trim();
+    if (!trimmedInput) return;
     
     // Check if tag already exists in current tags
-    if (tags.some(tag => tag.name.toLowerCase() === tagInput.toLowerCase())) {
+    if (tags.some(tag => tag.name.toLowerCase() === trimmedInput.toLowerCase())) {
       setTagInput("");
       return;
     }
     
-    // Check if tag exists in all tags or create new one
-    let newTag = allTags.find(tag => tag.name.toLowerCase() === tagInput.toLowerCase());
-    
-    if (!newTag) {
-      newTag = createTag(tagInput.trim());
-      setAllTags(prev => [...prev, newTag!]);
-    }
-    
-    setTags(prev => [...prev, newTag!]);
+    // Create or find existing tag
+    const newTag = createTag(trimmedInput);
+    setTags(prev => [...prev, newTag]);
     setTagInput("");
     setShowSuggestions(false);
+    
+    // Refresh all tags to include the newly created one
+    const updatedTags = getAllTags();
+    setAllTags(updatedTags);
   };
 
   const selectTagSuggestion = (tag: Tag) => {
@@ -116,7 +158,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (suggestions.length > 0) {
+      if (suggestions.length > 0 && showSuggestions) {
         selectTagSuggestion(suggestions[0]);
       } else {
         handleAddTag();
@@ -128,7 +170,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{item ? "Edit Item" : "Add New Item"}</DialogTitle>
         </DialogHeader>
@@ -139,9 +181,13 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
             <Input 
               id="url" 
               value={url} 
-              onChange={(e) => setUrl(e.target.value)} 
-              placeholder="https://example.com"
+              onChange={(e) => handleUrlChange(e.target.value)} 
+              placeholder="https://example.com or Google Maps link"
+              disabled={isProcessingUrl}
             />
+            {isProcessingUrl && (
+              <p className="text-xs text-gray-500">Processing Google Maps link...</p>
+            )}
           </div>
           
           <div className="space-y-2">
@@ -185,6 +231,8 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                   value={tagInput} 
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleTagInputKeyDown}
+                  onFocus={() => tagInput && setShowSuggestions(suggestions.length > 0)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                   placeholder="Add a tag"
                   className="flex-1"
                 />
@@ -203,6 +251,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
                   {suggestions.map((tag) => (
                     <div
                       key={tag.id}
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectTagSuggestion(tag)}
                       className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm"
                     >
@@ -234,7 +283,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave} disabled={!title.trim()}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
