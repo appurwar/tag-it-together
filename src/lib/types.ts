@@ -5,6 +5,7 @@ export interface List {
   itemCount: number;
   icon?: string;
   lastModified: Date;
+  previewImage?: string;
 }
 
 export interface ListItem {

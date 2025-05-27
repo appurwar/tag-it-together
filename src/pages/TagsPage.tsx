@@ -11,46 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-
-// Helper functions for localStorage persistence
-const TAGS_STORAGE_KEY = 'linknest_tags';
-
-const getStoredTags = (): Tag[] => {
-  try {
-    const stored = localStorage.getItem(TAGS_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading tags from storage:', error);
-  }
-  
-  // Return default tags if nothing stored
-  return [
-    { id: "1", name: "Pizza", count: 1 },
-    { id: "2", name: "Fast Food", count: 2 },
-    { id: "3", name: "Japanese", count: 1 },
-    { id: "4", name: "Sushi", count: 1 },
-    { id: "5", name: "Burgers", count: 1 },
-    { id: "6", name: "Mexican", count: 1 },
-    { id: "7", name: "Mountains", count: 1 },
-    { id: "8", name: "Moderate", count: 1 },
-    { id: "9", name: "Fiction", count: 2 },
-    { id: "10", name: "Classic", count: 1 },
-    { id: "11", name: "Dystopian", count: 1 },
-    { id: "12", name: "Sci-Fi", count: 1 },
-    { id: "13", name: "Action", count: 1 },
-    { id: "14", name: "Drama", count: 1 }
-  ];
-};
-
-const storeTags = (tags: Tag[]) => {
-  try {
-    localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
-  } catch (error) {
-    console.error('Error saving tags to storage:', error);
-  }
-};
+import { getAllTags, createTag, deleteTag } from "@/lib/dataManager";
 
 const TagsPage = () => {
   const navigate = useNavigate();
@@ -60,19 +21,15 @@ const TagsPage = () => {
   const [newTagName, setNewTagName] = useState("");
 
   useEffect(() => {
-    const storedTags = getStoredTags();
-    
-    // Sort tags alphabetically
-    const sortedTags = [...storedTags].sort((a, b) => a.name.localeCompare(b.name));
-    
-    setTags(sortedTags);
-    setFilteredTags(sortedTags);
+    const storedTags = getAllTags();
+    setTags(storedTags);
+    setFilteredTags(storedTags);
   }, []);
 
-  const updateTags = (newTags: Tag[]) => {
-    setTags(newTags);
-    setFilteredTags(newTags);
-    storeTags(newTags);
+  const refreshTags = () => {
+    const updatedTags = getAllTags();
+    setTags(updatedTags);
+    setFilteredTags(updatedTags);
   };
   
   const handleSearch = (query: string) => {
@@ -96,14 +53,8 @@ const TagsPage = () => {
       return;
     }
     
-    const newTag: Tag = {
-      id: Date.now().toString(),
-      name: newTagName.trim(),
-      count: 0
-    };
-    
-    const updatedTags = [...tags, newTag].sort((a, b) => a.name.localeCompare(b.name));
-    updateTags(updatedTags);
+    createTag(newTagName.trim());
+    refreshTags();
     setNewTagName("");
     setIsAddTagOpen(false);
     toast.success(`Tag "${newTagName}" created successfully`);
@@ -118,7 +69,7 @@ const TagsPage = () => {
         <SearchInput onSearch={handleSearch} placeholder="Search tags..." />
       </div>
 
-      <div className="mt-16 px-4 py-4">
+      <div className="mt-20 px-4 py-4">
         {filteredTags.length > 0 ? (
           <div className="flex flex-wrap gap-3">
             {filteredTags.map((tag) => (

@@ -7,26 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useState, useEffect } from "react";
 import { ListItem, Tag } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-// Mock data of all existing tags for suggestions
-const mockAllTags: Tag[] = [
-  { id: "1", name: "Pizza" },
-  { id: "2", name: "Fast Food" },
-  { id: "3", name: "Japanese" },
-  { id: "4", name: "Sushi" },
-  { id: "5", name: "Burgers" },
-  { id: "6", name: "Mexican" },
-  { id: "7", name: "Mountains" },
-  { id: "8", name: "Moderate" },
-  { id: "9", name: "Fiction" },
-  { id: "10", name: "Classic" },
-  { id: "11", name: "Dystopian" },
-  { id: "12", name: "Sci-Fi" },
-  { id: "13", name: "Action" },
-  { id: "14", name: "Drama" }
-];
+import { getAllTags, createTag } from "@/lib/dataManager";
 
 interface AddEditListItemProps {
   isOpen: boolean;
@@ -42,7 +23,9 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const [location, setLocation] = useState(item?.location || "");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<Tag[]>(item?.tags || []);
+  const [suggestions, setSuggestions] = useState<Tag[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   // Reset form when opening for a new item or editing an existing one
   useEffect(() => {
@@ -54,18 +37,29 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       setTags(item?.tags || []);
       setTagInput("");
       setShowSuggestions(false);
+      
+      // Load all available tags
+      const availableTags = getAllTags();
+      setAllTags(availableTags);
     }
   }, [isOpen, item]);
 
-  // Get filtered tag suggestions
-  const getFilteredSuggestions = () => {
-    if (!tagInput.trim()) return [];
-    
-    return mockAllTags.filter(tag => 
+  // Update suggestions when tag input changes
+  useEffect(() => {
+    if (!tagInput.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const filtered = allTags.filter(tag => 
       tag.name.toLowerCase().includes(tagInput.toLowerCase()) &&
       !tags.some(existingTag => existingTag.id === tag.id)
     );
-  };
+    
+    setSuggestions(filtered);
+    setShowSuggestions(filtered.length > 0);
+  }, [tagInput, allTags, tags]);
 
   const handleAddTag = () => {
     if (!tagInput.trim()) return;
@@ -73,28 +67,25 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     // Check if tag already exists in current tags
     if (tags.some(tag => tag.name.toLowerCase() === tagInput.toLowerCase())) {
       setTagInput("");
-      setShowSuggestions(false);
       return;
     }
     
-    // Check if tag already exists in global tags
-    const existingTag = mockAllTags.find(
-      tag => tag.name.toLowerCase() === tagInput.toLowerCase()
-    );
+    // Check if tag exists in all tags or create new one
+    let newTag = allTags.find(tag => tag.name.toLowerCase() === tagInput.toLowerCase());
     
-    const newTag: Tag = existingTag || {
-      id: Date.now().toString(),
-      name: tagInput.trim(),
-    };
+    if (!newTag) {
+      newTag = createTag(tagInput.trim());
+      setAllTags(prev => [...prev, newTag!]);
+    }
     
-    setTags([...tags, newTag]);
+    setTags(prev => [...prev, newTag!]);
     setTagInput("");
     setShowSuggestions(false);
   };
 
   const selectTagSuggestion = (tag: Tag) => {
     if (!tags.some(existingTag => existingTag.id === tag.id)) {
-      setTags(prevTags => [...prevTags, tag]);
+      setTags(prev => [...prev, tag]);
     }
     setTagInput("");
     setShowSuggestions(false);
@@ -122,22 +113,18 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
     onClose();
   };
 
-  const handleTagInputChange = (value: string) => {
-    setTagInput(value);
-    const suggestions = getFilteredSuggestions();
-    setShowSuggestions(value.trim().length > 0 && suggestions.length > 0);
-  };
-
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleAddTag();
+      if (suggestions.length > 0) {
+        selectTagSuggestion(suggestions[0]);
+      } else {
+        handleAddTag();
+      }
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
     }
   };
-
-  const filteredSuggestions = getFilteredSuggestions();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -192,52 +179,38 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
           <div className="space-y-2">
             <Label htmlFor="tags">Tags</Label>
             <div className="relative">
-              <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
-                <PopoverTrigger asChild>
-                  <div className="flex">
-                    <Input 
-                      id="tags" 
-                      value={tagInput} 
-                      onChange={(e) => handleTagInputChange(e.target.value)}
-                      onKeyDown={handleTagInputKeyDown}
-                      onFocus={() => {
-                        if (tagInput.trim() && filteredSuggestions.length > 0) {
-                          setShowSuggestions(true);
-                        }
-                      }}
-                      placeholder="Add a tag"
-                      className="flex-1"
-                    />
-                    <Button 
-                      type="button"
-                      variant="secondary" 
-                      onClick={handleAddTag}
-                      className="ml-2"
+              <div className="flex">
+                <Input 
+                  id="tags" 
+                  value={tagInput} 
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  placeholder="Add a tag"
+                  className="flex-1"
+                />
+                <Button 
+                  type="button"
+                  variant="secondary" 
+                  onClick={handleAddTag}
+                  className="ml-2"
+                >
+                  Add
+                </Button>
+              </div>
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-32 overflow-y-auto">
+                  {suggestions.map((tag) => (
+                    <div
+                      key={tag.id}
+                      onClick={() => selectTagSuggestion(tag)}
+                      className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm"
                     >
-                      Add
-                    </Button>
-                  </div>
-                </PopoverTrigger>
-                {showSuggestions && filteredSuggestions.length > 0 && (
-                  <PopoverContent className="p-0 w-full" align="start">
-                    <Command>
-                      <CommandList>
-                        <CommandGroup heading="Tag suggestions">
-                          {filteredSuggestions.map((tag) => (
-                            <CommandItem
-                              key={tag.id}
-                              onSelect={() => selectTagSuggestion(tag)}
-                              className="cursor-pointer"
-                            >
-                              {tag.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                )}
-              </Popover>
+                      {tag.name}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             {tags.length > 0 && (

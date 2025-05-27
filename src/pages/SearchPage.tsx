@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TabBar from "@/components/layout/TabBar";
 import SearchInput from "@/components/shared/SearchInput";
@@ -7,57 +7,7 @@ import ListItemCard from "@/components/lists/ListItemCard";
 import { ListItem } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
 import { toast } from "sonner";
-
-// Mock data combining all list items
-const allMockItems: ListItem[] = [
-  {
-    id: "101",
-    title: "Pizza Hut",
-    description: "Need to try their new stuffed crust",
-    tags: [{ id: "1", name: "Pizza" }, { id: "2", name: "Fast Food" }],
-    location: "Downtown",
-    completed: false,
-    createdAt: new Date(2023, 4, 10),
-    previewImage: "https://source.unsplash.com/random/300x200?pizza"
-  },
-  {
-    id: "102",
-    title: "Sushi Place",
-    description: "Authentic Japanese cuisine",
-    tags: [{ id: "3", name: "Japanese" }, { id: "4", name: "Sushi" }],
-    location: "Midtown",
-    completed: false,
-    createdAt: new Date(2023, 4, 12)
-  },
-  {
-    id: "103",
-    title: "Burger Joint",
-    description: "Best burgers in town",
-    tags: [{ id: "5", name: "Burgers" }, { id: "2", name: "Fast Food" }],
-    completed: true,
-    createdAt: new Date(2023, 3, 28)
-  },
-  {
-    id: "201",
-    title: "Mountain Trail",
-    description: "Beautiful mountain views, moderate difficulty",
-    tags: [{ id: "7", name: "Mountains" }, { id: "8", name: "Moderate" }],
-    location: "Rocky Mountain Park",
-    completed: false,
-    createdAt: new Date(2023, 4, 20),
-    previewImage: "https://source.unsplash.com/random/300x200?mountain"
-  }
-];
-
-const allTags = [
-  { id: "1", name: "Pizza" },
-  { id: "2", name: "Fast Food" },
-  { id: "3", name: "Japanese" },
-  { id: "4", name: "Sushi" },
-  { id: "5", name: "Burgers" },
-  { id: "7", name: "Mountains" },
-  { id: "8", name: "Moderate" }
-];
+import { getAllItems, getAllTags, updateItem, deleteItem } from "@/lib/dataManager";
 
 const SearchPage = () => {
   const navigate = useNavigate();
@@ -65,6 +15,16 @@ const SearchPage = () => {
   const [results, setResults] = useState<ListItem[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [allItems, setAllItems] = useState<ListItem[]>([]);
+  const [allTags, setAllTags] = useState<any[]>([]);
+
+  useEffect(() => {
+    const items = getAllItems();
+    const tags = getAllTags();
+    setAllItems(items);
+    setAllTags(tags);
+    setResults(items);
+  }, []);
 
   const handleSearch = (searchQuery: string) => {
     setQuery(searchQuery);
@@ -87,7 +47,7 @@ const SearchPage = () => {
   };
 
   const performSearch = (searchQuery: string, tags: string[], includeCompleted: boolean) => {
-    let filtered = allMockItems;
+    let filtered = allItems;
     
     // Filter by search query
     if (searchQuery) {
@@ -113,26 +73,40 @@ const SearchPage = () => {
     setResults(filtered);
   };
 
+  const refreshData = () => {
+    const items = getAllItems();
+    setAllItems(items);
+    performSearch(query, selectedTags, showCompleted);
+  };
+
   // Add handlers for toggle complete and delete
   const handleToggleComplete = (itemId: string) => {
-    // In a real app, this would call an API
-    toast.success("Item status updated");
+    const item = allItems.find(i => i.id === itemId);
+    if (item) {
+      updateItem(itemId, { completed: !item.completed });
+      refreshData();
+      toast.success("Item status updated");
+    }
   };
 
   const handleDeleteItem = (itemId: string) => {
-    // In a real app, this would call an API
+    deleteItem(itemId);
+    refreshData();
     toast.success("Item deleted");
   };
 
   return (
-    <div className="pb-16 h-screen bg-gray-50">
-      <div className="px-4 pt-4 pb-2 bg-white fixed top-0 left-0 right-0 z-40 shadow-sm">
+    <div className="pb-16 h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="px-4 pt-4 pb-2 bg-white dark:bg-gray-800 fixed top-0 left-0 right-0 z-40 shadow-sm">
+        <div className="flex items-center justify-center mb-2">
+          <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-100">LinkNest</h1>
+        </div>
         <SearchInput onSearch={handleSearch} placeholder="Search items..." />
       </div>
 
       <div className="mt-16 px-4">
         <div className="mb-4">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Filter by Tag:</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Filter by Tag:</h2>
           <div className="flex flex-wrap gap-2">
             {allTags.map(tag => (
               <TagBadge
@@ -156,13 +130,13 @@ const SearchPage = () => {
             onChange={toggleShowCompleted}
             className="mr-2 rounded border-gray-300 text-ios-blue focus:ring-ios-blue"
           />
-          <label htmlFor="showCompleted" className="text-sm text-gray-700">
+          <label htmlFor="showCompleted" className="text-sm text-gray-700 dark:text-gray-300">
             Show completed items
           </label>
         </div>
 
         <div className="mt-6">
-          <h1 className="text-xl font-bold mb-4">
+          <h1 className="text-xl font-bold mb-4 dark:text-white">
             {query || selectedTags.length > 0 ? "Results" : "Recent Items"}
           </h1>
 
@@ -179,7 +153,7 @@ const SearchPage = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10 text-gray-500">
+            <div className="text-center py-10 text-gray-500 dark:text-gray-400">
               <p>No items found</p>
             </div>
           )}

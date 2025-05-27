@@ -20,65 +20,7 @@ import { ChevronDown } from "lucide-react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSwappingStrategy } from "@dnd-kit/sortable";
 import { toast } from "sonner";
-
-// Helper functions for localStorage persistence
-const LISTS_STORAGE_KEY = 'linknest_lists';
-
-const getStoredLists = (): List[] => {
-  try {
-    const stored = localStorage.getItem(LISTS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Convert date strings back to Date objects
-      return parsed.map((list: any) => ({
-        ...list,
-        lastModified: new Date(list.lastModified)
-      }));
-    }
-  } catch (error) {
-    console.error('Error loading lists from storage:', error);
-  }
-  
-  // Return default lists if nothing stored
-  return [
-    {
-      id: "1",
-      name: "Places to Eat",
-      itemCount: 5,
-      icon: "🍕",
-      lastModified: new Date()
-    },
-    {
-      id: "2",
-      name: "Hikes to Do", 
-      itemCount: 3,
-      icon: "🥾",
-      lastModified: new Date()
-    },
-    {
-      id: "3",
-      name: "Books to Read",
-      itemCount: 12,
-      icon: "📚",
-      lastModified: new Date()
-    },
-    {
-      id: "4",
-      name: "Movies to Watch",
-      itemCount: 8,
-      icon: "🎬",
-      lastModified: new Date()
-    }
-  ];
-};
-
-const storeLists = (lists: List[]) => {
-  try {
-    localStorage.setItem(LISTS_STORAGE_KEY, JSON.stringify(lists));
-  } catch (error) {
-    console.error('Error saving lists to storage:', error);
-  }
-};
+import { getAllLists, createList, updateList, deleteList } from "@/lib/dataManager";
 
 const ListsPage = () => {
   const navigate = useNavigate();
@@ -90,13 +32,19 @@ const ListsPage = () => {
   const [editingList, setEditingList] = useState<List | null>(null);
   const [isEditListOpen, setIsEditListOpen] = useState(false);
   const [isDeleteListConfirmOpen, setIsDeleteListConfirmOpen] = useState(false);
+  const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
-  // Load lists from localStorage on component mount
+  // Load lists from dataManager on component mount
   useEffect(() => {
-    const storedLists = getStoredLists();
+    refreshLists();
+  }, []);
+
+  const refreshLists = () => {
+    const storedLists = getAllLists();
     setLists(storedLists);
     setFilteredLists(storedLists);
-  }, []);
+  };
 
   // Configure dnd-kit sensors for drag and drop with a delay for long press
   const sensors = useSensors(
@@ -107,12 +55,6 @@ const ListsPage = () => {
       },
     })
   );
-
-  const updateLists = (newLists: List[]) => {
-    setLists(newLists);
-    setFilteredLists(newLists);
-    storeLists(newLists);
-  };
 
   const handleSearch = (query: string) => {
     if (!query) {
@@ -142,15 +84,12 @@ const ListsPage = () => {
   const handleAddList = () => {
     if (!newListName.trim()) return;
     
-    const newList: List = {
-      id: Date.now().toString(),
+    createList({
       name: newListName,
-      itemCount: 0,
-      lastModified: new Date()
-    };
+      itemCount: 0
+    });
     
-    const updatedLists = [newList, ...lists];
-    updateLists(updatedLists);
+    refreshLists();
     setNewListName("");
     setIsAddListOpen(false);
     toast.success(`List "${newListName}" created successfully`);
@@ -159,13 +98,8 @@ const ListsPage = () => {
   const handleEditList = () => {
     if (!editingList || !editingList.name.trim()) return;
 
-    const updatedLists = lists.map(list => 
-      list.id === editingList.id 
-        ? { ...list, name: editingList.name, lastModified: new Date() } 
-        : list
-    );
-
-    updateLists(updatedLists);
+    updateList(editingList.id, { name: editingList.name });
+    refreshLists();
     setIsEditListOpen(false);
     setEditingList(null);
     toast.success("List updated successfully");
@@ -174,11 +108,28 @@ const ListsPage = () => {
   const handleDeleteList = () => {
     if (!editingList) return;
 
-    const updatedLists = lists.filter(list => list.id !== editingList.id);
-    updateLists(updatedLists);
+    deleteList(editingList.id);
+    refreshLists();
     setIsDeleteListConfirmOpen(false);
     setEditingList(null);
     toast.success(`"${editingList.name}" deleted`);
+  };
+
+  const handleImageUpload = () => {
+    if (!editingList || !selectedImage) return;
+
+    // Convert image to base64 for storage
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target?.result as string;
+      updateList(editingList.id, { previewImage: imageData });
+      refreshLists();
+      setIsImageUploadOpen(false);
+      setEditingList(null);
+      setSelectedImage(null);
+      toast.success("List thumbnail updated successfully");
+    };
+    reader.readAsDataURL(selectedImage);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -196,7 +147,7 @@ const ListsPage = () => {
       // If we're in custom sort mode, update the main list array too
       if (sortOption === "custom") {
         const reorderedMain = arrayMove(lists, oldIndex, newIndex);
-        updateLists(reorderedMain);
+        setLists(reorderedMain);
       } else {
         // Auto-switch to custom sort when user manually rearranges
         setSortOption("custom");
@@ -264,6 +215,10 @@ const ListsPage = () => {
                     onDelete={() => {
                       setEditingList(list);
                       setIsDeleteListConfirmOpen(true);
+                    }}
+                    onUpdateThumbnail={() => {
+                      setEditingList(list);
+                      setIsImageUploadOpen(true);
                     }}
                   />
                 ))
@@ -349,6 +304,33 @@ const ListsPage = () => {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteList}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadOpen} onOpenChange={setIsImageUploadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update List Thumbnail</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="thumbnail">Choose Image</Label>
+            <Input
+              id="thumbnail"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageUploadOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleImageUpload} disabled={!selectedImage}>
+              Upload
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

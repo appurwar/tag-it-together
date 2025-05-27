@@ -26,126 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// Mock data
-const mockLists: List[] = [
-  {
-    id: "1",
-    name: "Places to Eat",
-    itemCount: 5,
-    icon: "🍕",
-    lastModified: new Date(2023, 4, 15)
-  },
-  {
-    id: "2",
-    name: "Hikes to Do",
-    itemCount: 3,
-    icon: "🥾",
-    lastModified: new Date(2023, 5, 2)
-  },
-  {
-    id: "3",
-    name: "Books to Read",
-    itemCount: 12,
-    icon: "📚",
-    lastModified: new Date(2023, 4, 28)
-  },
-  {
-    id: "4",
-    name: "Movies to Watch",
-    itemCount: 8,
-    icon: "🎬",
-    lastModified: new Date(2023, 5, 1)
-  }
-];
-
-const mockItems: Record<string, ListItem[]> = {
-  "1": [
-    {
-      id: "101",
-      title: "Pizza Hut",
-      description: "Need to try their new stuffed crust",
-      tags: [{ id: "1", name: "Pizza" }, { id: "2", name: "Fast Food" }],
-      location: "Downtown",
-      completed: false,
-      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-      previewImage: "https://source.unsplash.com/random/300x200?pizza"
-    },
-    {
-      id: "102",
-      title: "Sushi Place",
-      description: "Authentic Japanese cuisine",
-      tags: [{ id: "3", name: "Japanese" }, { id: "4", name: "Sushi" }],
-      location: "Midtown",
-      completed: false,
-      createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
-    },
-    {
-      id: "103",
-      title: "Burger Joint",
-      description: "Best burgers in town",
-      tags: [{ id: "5", name: "Burgers" }, { id: "2", name: "Fast Food" }],
-      completed: true,
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
-    },
-    {
-      id: "104",
-      title: "Taco Tuesday",
-      tags: [{ id: "6", name: "Mexican" }],
-      location: "South Side",
-      completed: true,
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
-    }
-  ],
-  "2": [
-    {
-      id: "201",
-      title: "Mountain Trail",
-      description: "Beautiful mountain views, moderate difficulty",
-      tags: [{ id: "7", name: "Mountains" }, { id: "8", name: "Moderate" }],
-      location: "Rocky Mountain Park",
-      completed: false,
-      createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-      previewImage: "https://source.unsplash.com/random/300x200?mountain"
-    }
-  ],
-  "3": [
-    {
-      id: "301",
-      title: "The Great Gatsby",
-      description: "Classic novel by F. Scott Fitzgerald",
-      tags: [{ id: "9", name: "Fiction" }, { id: "10", name: "Classic" }],
-      completed: false,
-      createdAt: new Date(Date.now() - 18 * 60 * 60 * 1000) // 18 hours ago
-    },
-    {
-      id: "302",
-      title: "1984",
-      description: "Dystopian novel by George Orwell",
-      tags: [{ id: "9", name: "Fiction" }, { id: "11", name: "Dystopian" }],
-      completed: false,
-      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) // 4 days ago
-    }
-  ],
-  "4": [
-    {
-      id: "401",
-      title: "Inception",
-      description: "Mind-bending sci-fi movie",
-      tags: [{ id: "12", name: "Sci-Fi" }, { id: "13", name: "Action" }],
-      completed: false,
-      createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000) // 8 hours ago
-    },
-    {
-      id: "402",
-      title: "The Shawshank Redemption",
-      description: "Classic prison drama",
-      tags: [{ id: "14", name: "Drama" }],
-      completed: false,
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
-    }
-  ]
-};
+import { getAllLists, getItemsByListId, createItem, updateItem, deleteItem, deleteList, extractPlaceFromGoogleMapsUrl } from "@/lib/dataManager";
 
 const ListDetailPage = () => {
   const { listId } = useParams<{ listId: string }>();
@@ -163,33 +44,56 @@ const ListDetailPage = () => {
   const [isDeleteItemModalOpen, setIsDeleteItemModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ListItem | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [googleMapsUrl, setGoogleMapsUrl] = useState("");
+  const [isGoogleMapsDialogOpen, setIsGoogleMapsDialogOpen] = useState(false);
+  const [extractedPlace, setExtractedPlace] = useState<Partial<ListItem> | null>(null);
   
   useEffect(() => {
     if (!listId) return;
     
-    // Find the list in mock data
-    const foundList = mockLists.find(l => l.id === listId);
+    refreshData();
+  }, [listId]);
+
+  const refreshData = () => {
+    if (!listId) return;
+
+    const allLists = getAllLists();
+    const foundList = allLists.find(l => l.id === listId);
+    
     if (foundList) {
-      // Update the itemCount to reflect actual items
-      const listItems = mockItems[listId] || [];
-      const updatedList = {
-        ...foundList,
-        itemCount: listItems.length
-      };
-      setList(updatedList);
-      
-      // Load list items
+      setList(foundList);
+      const listItems = getItemsByListId(listId);
       setItems(listItems);
       setFilteredItems(listItems);
-      
-      // Separate active and completed items
       setActiveItems(listItems.filter(item => !item.completed));
       setCompletedItems(listItems.filter(item => item.completed));
     } else {
-      // List not found, go back to lists
       navigate("/lists");
     }
-  }, [listId, navigate]);
+  };
+
+  // Handle Google Maps URL sharing
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'GOOGLE_MAPS_SHARE' && event.data?.url) {
+        setGoogleMapsUrl(event.data.url);
+        handleGoogleMapsShare(event.data.url);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const handleGoogleMapsShare = async (url: string) => {
+    const placeData = await extractPlaceFromGoogleMapsUrl(url);
+    if (placeData) {
+      setExtractedPlace(placeData);
+      setIsGoogleMapsDialogOpen(true);
+    } else {
+      toast.error("Could not extract place information from the URL");
+    }
+  };
   
   const handleSearch = (query: string) => {
     if (!query) {
@@ -212,35 +116,28 @@ const ListDetailPage = () => {
   };
   
   const handleDeleteList = () => {
-    // In a real app, delete from API
+    if (!listId) return;
+    
+    deleteList(listId);
     toast.success(`"${list?.name}" list deleted`);
     navigate("/lists");
   };
   
   const handleToggleComplete = (itemId: string) => {
-    const updatedItems = items.map(item => {
-      if (item.id === itemId) {
-        return { ...item, completed: !item.completed };
-      }
-      return item;
-    });
-    
-    setItems(updatedItems);
-    setFilteredItems(updatedItems);
-    setActiveItems(updatedItems.filter(item => !item.completed));
-    setCompletedItems(updatedItems.filter(item => item.completed));
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    updateItem(itemId, { completed: !item.completed });
+    refreshData();
   };
   
   const handleSaveItem = (newItem: Partial<ListItem>) => {
-    // Create or update item
     if (!listId) return;
     
-    let updatedItems;
     const isNewItem = !newItem.id;
     
     if (isNewItem) {
-      const item: ListItem = {
-        id: Date.now().toString(),
+      createItem(listId, {
         title: newItem.title || "",
         url: newItem.url,
         description: newItem.description,
@@ -248,51 +145,21 @@ const ListDetailPage = () => {
         location: newItem.location,
         completed: false,
         createdAt: new Date(),
-      };
-      
-      updatedItems = [item, ...items];
+      });
       toast.success("Item added successfully");
     } else {
-      updatedItems = items.map(item => 
-        item.id === newItem.id ? { ...item, ...newItem } : item
-      );
+      updateItem(newItem.id!, newItem);
       toast.success("Item updated successfully");
     }
     
-    setItems(updatedItems);
-    setFilteredItems(updatedItems);
-    setActiveItems(updatedItems.filter(item => !item.completed));
-    setCompletedItems(updatedItems.filter(item => item.completed));
-    
-    // Update list itemCount
-    if (list && isNewItem) {
-      setList({
-        ...list,
-        itemCount: list.itemCount + 1,
-        lastModified: new Date()
-      });
-    }
+    refreshData();
   };
   
   const handleDeleteItem = () => {
     if (!itemToDelete) return;
     
-    const updatedItems = items.filter(item => item.id !== itemToDelete.id);
-    
-    setItems(updatedItems);
-    setFilteredItems(updatedItems);
-    setActiveItems(updatedItems.filter(item => !item.completed));
-    setCompletedItems(updatedItems.filter(item => item.completed));
-    
-    // Update list itemCount
-    if (list) {
-      setList({
-        ...list,
-        itemCount: list.itemCount - 1,
-        lastModified: new Date()
-      });
-    }
-    
+    deleteItem(itemToDelete.id);
+    refreshData();
     setIsDeleteItemModalOpen(false);
     setItemToDelete(null);
     toast.success("Item deleted successfully");
@@ -301,6 +168,26 @@ const ListDetailPage = () => {
   const handleEditItem = (item: ListItem) => {
     setEditingItem(item);
     setIsEditItemOpen(true);
+  };
+
+  const handleSaveGoogleMapsPlace = () => {
+    if (!extractedPlace || !listId) return;
+
+    createItem(listId, {
+      title: extractedPlace.title || "",
+      url: extractedPlace.url,
+      description: extractedPlace.description,
+      tags: extractedPlace.tags || [],
+      location: extractedPlace.location,
+      completed: false,
+      createdAt: new Date(),
+    });
+
+    refreshData();
+    setIsGoogleMapsDialogOpen(false);
+    setExtractedPlace(null);
+    setGoogleMapsUrl("");
+    toast.success("Place added successfully");
   };
   
   return (
@@ -357,7 +244,8 @@ const ListDetailPage = () => {
           </div>
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-            <p>No active items</p>
+            <p>This list is currently empty</p>
+            <p className="text-sm mt-2">Add your first item using the + button below</p>
           </div>
         )}
         
@@ -417,6 +305,30 @@ const ListDetailPage = () => {
         onSave={handleSaveItem}
         item={editingItem || undefined}
       />
+
+      {/* Google Maps Place Dialog */}
+      <AlertDialog open={isGoogleMapsDialogOpen} onOpenChange={setIsGoogleMapsDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add Place from Google Maps</AlertDialogTitle>
+            <AlertDialogDescription>
+              {extractedPlace && (
+                <div className="space-y-2">
+                  <p><strong>Name:</strong> {extractedPlace.title}</p>
+                  {extractedPlace.location && <p><strong>Location:</strong> {extractedPlace.location}</p>}
+                  <p>Do you want to add this place to "{list?.name}"?</p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveGoogleMapsPlace}>
+              Add Place
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent>
