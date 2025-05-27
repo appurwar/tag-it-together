@@ -6,15 +6,28 @@ import TabBar from "@/components/layout/TabBar";
 import ListItemCard from "@/components/lists/ListItemCard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { getItemsByTagId, getAllTags, updateItem, deleteItem } from "@/lib/dataManager";
+import AddEditListItem from "@/components/lists/AddEditListItem";
+import { toast } from "sonner";
 
 const TagItemsPage = () => {
   const { tagId } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState<ListItem[]>([]);
   const [tag, setTag] = useState<Tag | null>(null);
+  const [editingItem, setEditingItem] = useState<ListItem | null>(null);
+  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<ListItem | null>(null);
 
   useEffect(() => {
+    if (tagId) {
+      refreshData();
+    }
+  }, [tagId]);
+
+  const refreshData = () => {
     if (tagId) {
       const filteredItems = getItemsByTagId(tagId);
       setItems(filteredItems);
@@ -25,13 +38,6 @@ const TagItemsPage = () => {
       if (matchingTag) {
         setTag(matchingTag);
       }
-    }
-  }, [tagId]);
-
-  const refreshData = () => {
-    if (tagId) {
-      const filteredItems = getItemsByTagId(tagId);
-      setItems(filteredItems);
     }
   };
 
@@ -45,8 +51,24 @@ const TagItemsPage = () => {
   };
 
   // Add handler for deleting items
-  const handleDeleteItem = (itemId: string) => {
-    deleteItem(itemId);
+  const handleDeleteItem = () => {
+    if (itemToDelete) {
+      deleteItem(itemToDelete.id);
+      refreshData();
+      setIsDeleteConfirmOpen(false);
+      setItemToDelete(null);
+      toast.success("Item deleted successfully");
+    }
+  };
+
+  const handleEditItem = (item: ListItem) => {
+    setEditingItem(item);
+    setIsEditItemOpen(true);
+  };
+
+  const handleSaveItem = () => {
+    setIsEditItemOpen(false);
+    setEditingItem(null);
     refreshData();
   };
 
@@ -77,9 +99,12 @@ const TagItemsPage = () => {
               <ListItemCard
                 key={item.id}
                 item={item}
-                onClick={() => {}}
+                onClick={() => handleEditItem(item)}
                 onToggleComplete={() => handleToggleComplete(item.id)}
-                onDelete={() => handleDeleteItem(item.id)}
+                onDelete={() => {
+                  setItemToDelete(item);
+                  setIsDeleteConfirmOpen(true);
+                }}
               />
             ))}
           </div>
@@ -91,6 +116,35 @@ const TagItemsPage = () => {
       </div>
 
       <TabBar />
+
+      {/* Edit Item Dialog */}
+      {editingItem && (
+        <AddEditListItem
+          isOpen={isEditItemOpen}
+          onClose={() => setIsEditItemOpen(false)}
+          onSave={handleSaveItem}
+          listId={editingItem.id.split('_')[0]}
+          item={editingItem}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Item</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteItem}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

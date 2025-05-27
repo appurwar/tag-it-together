@@ -158,14 +158,14 @@ const ListsPage = () => {
 
   return (
     <div className="pb-16 h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="px-4 pt-4 pb-2 bg-white dark:bg-gray-800 fixed top-0 left-0 right-0 z-40 shadow-sm">
-        <div className="flex items-center justify-center mb-2">
+      <div className="px-4 pt-4 pb-4 bg-white dark:bg-gray-800 fixed top-0 left-0 right-0 z-40 shadow-sm">
+        <div className="flex items-center justify-center mb-3">
           <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-100">LinkNest</h1>
         </div>
         <SearchInput onSearch={handleSearch} placeholder="Search lists..." />
       </div>
 
-      <div className="mt-20 px-4">
+      <div className="mt-24 px-4">
         <div className="flex items-center justify-between mb-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
