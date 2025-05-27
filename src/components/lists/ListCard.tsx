@@ -42,27 +42,37 @@ const ListCard = ({ list, onClick, onEdit, onDelete }: ListCardProps) => {
             className="h-40 flex flex-col p-4 cursor-pointer hover:shadow-md transition-shadow animate-fade-in bg-white dark:bg-gray-800"
             onClick={onClick}
           >
-            <div className="flex items-start justify-between w-full">
-              <div className="h-10 w-10 rounded-full bg-ios-blue/10 flex items-center justify-center text-ios-blue text-xl font-bold dark:bg-ios-blue/20">
-                {list.icon || list.name.charAt(0)}
+            {list.previewImage ? (
+              <div className="h-20 w-full rounded-md overflow-hidden mb-2">
+                <img 
+                  src={list.previewImage} 
+                  alt={list.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <MoreVertical className="h-5 w-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-red-500 dark:text-red-400"
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            ) : (
+              <div className="flex items-start justify-between w-full">
+                <div className="h-10 w-10 rounded-full bg-ios-blue/10 flex items-center justify-center text-ios-blue text-xl font-bold dark:bg-ios-blue/20">
+                  {list.icon || list.name.charAt(0)}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical className="h-5 w-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-red-500 dark:text-red-400"
+                      onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
 
             <div className="mt-2 flex-grow">
               <h3 className="font-semibold text-base text-gray-800 dark:text-gray-100">{list.name}</h3>

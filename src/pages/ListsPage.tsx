@@ -86,7 +86,8 @@ const ListsPage = () => {
     
     createList({
       name: newListName,
-      itemCount: 0
+      itemCount: 0,
+      lastModified: new Date()
     });
     
     refreshLists();
@@ -215,10 +216,6 @@ const ListsPage = () => {
                     onDelete={() => {
                       setEditingList(list);
                       setIsDeleteListConfirmOpen(true);
-                    }}
-                    onUpdateThumbnail={() => {
-                      setEditingList(list);
-                      setIsImageUploadOpen(true);
                     }}
                   />
                 ))
