@@ -100,7 +100,7 @@ const TagsPage = () => {
         <SearchInput onSearch={handleSearch} placeholder="Search tags..." />
       </div>
 
-      <div className="mt-24 px-4 py-4">
+      <div className="mt-32 px-4 py-4">
         {filteredTags.length > 0 ? (
           <div className="flex flex-wrap gap-3">
             {filteredTags.map((tag) => (

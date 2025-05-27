@@ -66,10 +66,13 @@ const TagItemsPage = () => {
     setIsEditItemOpen(true);
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = (updatedItem: Partial<ListItem>) => {
+    if (editingItem && updatedItem) {
+      updateItem(editingItem.id, updatedItem);
+      refreshData();
+    }
     setIsEditItemOpen(false);
     setEditingItem(null);
-    refreshData();
   };
 
   return (
@@ -92,7 +95,7 @@ const TagItemsPage = () => {
         </p>
       </div>
 
-      <div className="mt-28 px-4 pb-16">
+      <div className="mt-32 px-4 pb-16">
         {items.length > 0 ? (
           <div className="space-y-3">
             {items.map(item => (
@@ -123,7 +126,6 @@ const TagItemsPage = () => {
           isOpen={isEditItemOpen}
           onClose={() => setIsEditItemOpen(false)}
           onSave={handleSaveItem}
-          listId={editingItem.id.split('_')[0]}
           item={editingItem}
         />
       )}

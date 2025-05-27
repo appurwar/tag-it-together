@@ -27,6 +27,7 @@ const getStoredData = <T>(key: string, defaultData: T[]): T[] => {
 const storeData = <T>(key: string, data: T[]) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    console.log(`Stored ${data.length} items to ${key}`);
   } catch (error) {
     console.error(`Error saving ${key} to storage:`, error);
   }
@@ -185,7 +186,7 @@ export const getItemsByTagId = (tagId: string): ListItem[] => {
 
 // List operations
 export const createList = (list: Omit<List, 'id'>): List => {
-  const lists = getAllLists();
+  const lists = getStoredData(LISTS_STORAGE_KEY, []);
   const newList: List = {
     ...list,
     id: Date.now().toString(),
@@ -194,11 +195,12 @@ export const createList = (list: Omit<List, 'id'>): List => {
   
   const updatedLists = [newList, ...lists];
   storeData(LISTS_STORAGE_KEY, updatedLists);
+  console.log('Created new list:', newList);
   return newList;
 };
 
 export const updateList = (listId: string, updates: Partial<List>): List | null => {
-  const lists = getAllLists();
+  const lists = getStoredData(LISTS_STORAGE_KEY, []);
   const listIndex = lists.findIndex(list => list.id === listId);
   
   if (listIndex === -1) return null;
@@ -211,11 +213,12 @@ export const updateList = (listId: string, updates: Partial<List>): List | null 
   
   lists[listIndex] = updatedList;
   storeData(LISTS_STORAGE_KEY, lists);
+  console.log('Updated list:', updatedList);
   return updatedList;
 };
 
 export const deleteList = (listId: string): boolean => {
-  const lists = getAllLists();
+  const lists = getStoredData(LISTS_STORAGE_KEY, []);
   const filteredLists = lists.filter(list => list.id !== listId);
   
   if (filteredLists.length === lists.length) return false;
@@ -226,12 +229,13 @@ export const deleteList = (listId: string): boolean => {
   
   storeData(LISTS_STORAGE_KEY, filteredLists);
   storeData(ITEMS_STORAGE_KEY, filteredItems);
+  console.log('Deleted list:', listId);
   return true;
 };
 
 // Item operations
 export const createItem = (listId: string, item: Omit<ListItem, 'id'>): ListItem => {
-  const items = getAllItems();
+  const items = getStoredData(ITEMS_STORAGE_KEY, []);
   const newItem: ListItem = {
     ...item,
     id: `${listId}_${Date.now()}`,
@@ -240,6 +244,7 @@ export const createItem = (listId: string, item: Omit<ListItem, 'id'>): ListItem
   
   const updatedItems = [newItem, ...items];
   storeData(ITEMS_STORAGE_KEY, updatedItems);
+  console.log('Created new item:', newItem);
   
   // Update list modified date
   updateList(listId, {});
@@ -251,10 +256,13 @@ export const createItem = (listId: string, item: Omit<ListItem, 'id'>): ListItem
 };
 
 export const updateItem = (itemId: string, updates: Partial<ListItem>): ListItem | null => {
-  const items = getAllItems();
+  const items = getStoredData(ITEMS_STORAGE_KEY, []);
   const itemIndex = items.findIndex(item => item.id === itemId);
   
-  if (itemIndex === -1) return null;
+  if (itemIndex === -1) {
+    console.log('Item not found for update:', itemId);
+    return null;
+  }
   
   const updatedItem = {
     ...items[itemIndex],
@@ -263,6 +271,7 @@ export const updateItem = (itemId: string, updates: Partial<ListItem>): ListItem
   
   items[itemIndex] = updatedItem;
   storeData(ITEMS_STORAGE_KEY, items);
+  console.log('Updated item:', updatedItem);
   
   // Update list modified date
   const listId = getItemListId(itemId);
@@ -275,12 +284,13 @@ export const updateItem = (itemId: string, updates: Partial<ListItem>): ListItem
 };
 
 export const deleteItem = (itemId: string): boolean => {
-  const items = getAllItems();
+  const items = getStoredData(ITEMS_STORAGE_KEY, []);
   const filteredItems = items.filter(item => item.id !== itemId);
   
   if (filteredItems.length === items.length) return false;
   
   storeData(ITEMS_STORAGE_KEY, filteredItems);
+  console.log('Deleted item:', itemId);
   
   // Update list modified date
   const listId = getItemListId(itemId);
@@ -294,10 +304,13 @@ export const deleteItem = (itemId: string): boolean => {
 
 // Tag operations
 export const createTag = (tagName: string): Tag => {
-  const tags = getAllTags();
+  const tags = getStoredData(TAGS_STORAGE_KEY, []);
   const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
   
-  if (existingTag) return existingTag;
+  if (existingTag) {
+    console.log('Tag already exists:', existingTag);
+    return existingTag;
+  }
   
   const newTag: Tag = {
     id: Date.now().toString(),
@@ -307,21 +320,23 @@ export const createTag = (tagName: string): Tag => {
   
   const updatedTags = [...tags, newTag].sort((a, b) => a.name.localeCompare(b.name));
   storeData(TAGS_STORAGE_KEY, updatedTags);
+  console.log('Created new tag:', newTag);
   return newTag;
 };
 
 export const deleteTag = (tagId: string): boolean => {
-  const tags = getAllTags();
+  const tags = getStoredData(TAGS_STORAGE_KEY, []);
   const filteredTags = tags.filter(tag => tag.id !== tagId);
   
   if (filteredTags.length === tags.length) return false;
   
   storeData(TAGS_STORAGE_KEY, filteredTags);
+  console.log('Deleted tag:', tagId);
   return true;
 };
 
 const updateTagCounts = () => {
-  const tags = getAllTags();
+  const tags = getStoredData(TAGS_STORAGE_KEY, []);
   storeData(TAGS_STORAGE_KEY, tags); // This will recalculate counts
 };
 
@@ -329,33 +344,39 @@ const updateTagCounts = () => {
 export const extractPlaceFromGoogleMapsUrl = async (url: string): Promise<Partial<ListItem> | null> => {
   try {
     const API_KEY = 'AIzaSyD8ZKmO1dyDpVoL1GzEWIi9OCXc3TiEFyY';
+    console.log('Processing Google Maps URL:', url);
     
     // Extract place ID from Google Maps URL
     let placeId = '';
     const placeIdMatch = url.match(/place_id=([^&]+)/);
     if (placeIdMatch) {
       placeId = placeIdMatch[1];
+      console.log('Found place ID:', placeId);
     } else {
       // Try to extract from different URL formats
       const dataMatch = url.match(/data=.*!1s(0x[^!]+).*!2s([^!]+)/);
       if (dataMatch) {
         // This is a fallback - we'll use text search instead
         const placeName = decodeURIComponent(dataMatch[2]).replace(/\+/g, ' ');
+        console.log('Using text search for:', placeName);
         
         const textSearchResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName)}&key=${API_KEY}`
+          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placeName)}&key=${API_KEY}`,
+          { mode: 'cors' }
         );
         
         if (textSearchResponse.ok) {
           const textSearchData = await textSearchResponse.json();
           if (textSearchData.results && textSearchData.results.length > 0) {
             placeId = textSearchData.results[0].place_id;
+            console.log('Found place ID from text search:', placeId);
           }
         }
       }
     }
 
     if (!placeId) {
+      console.log('No place ID found, using fallback extraction');
       // Fallback to simple extraction
       const urlObj = new URL(url);
       let placeName = '';
@@ -375,8 +396,10 @@ export const extractPlaceFromGoogleMapsUrl = async (url: string): Promise<Partia
     }
 
     // Get place details using Places API
+    console.log('Fetching place details for:', placeId);
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,rating,price_level,types,photos,geometry&key=${API_KEY}`
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,rating,price_level,types,photos,geometry&key=${API_KEY}`,
+      { mode: 'cors' }
     );
 
     if (!response.ok) {
@@ -384,6 +407,7 @@ export const extractPlaceFromGoogleMapsUrl = async (url: string): Promise<Partia
     }
 
     const data = await response.json();
+    console.log('Places API response:', data);
     
     if (data.status !== 'OK' || !data.result) {
       throw new Error('Place not found');
@@ -411,6 +435,13 @@ export const extractPlaceFromGoogleMapsUrl = async (url: string): Promise<Partia
         tags.push(tag);
       }
     }
+
+    console.log('Successfully extracted place data:', {
+      title: place.name,
+      location: place.formatted_address,
+      rating: place.rating,
+      tags: tags.map(t => t.name)
+    });
 
     return {
       title: place.name || 'New Place',

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useState, useEffect, useCallback } from "react";
 import { ListItem, Tag } from "@/lib/types";
 import TagBadge from "@/components/tags/TagBadge";
-import { getAllTags, createTag, extractPlaceFromGoogleMapsUrl } from "@/lib/dataManager";
+import { getAllTags, createTag, extractPlaceFromGoogleMapsUrl, createItem, updateItem } from "@/lib/dataManager";
 import { toast } from "sonner";
 
 interface AddEditListItemProps {
@@ -15,9 +15,10 @@ interface AddEditListItemProps {
   onClose: () => void;
   onSave: (item: Partial<ListItem>) => void;
   item?: ListItem;
+  listId?: string; // For creating new items
 }
 
-const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps) => {
+const AddEditListItem = ({ isOpen, onClose, onSave, item, listId }: AddEditListItemProps) => {
   const [title, setTitle] = useState(item?.title || "");
   const [url, setUrl] = useState(item?.url || "");
   const [description, setDescription] = useState(item?.description || "");
@@ -140,8 +141,7 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
   const handleSave = () => {
     if (!title.trim()) return;
     
-    onSave({
-      id: item?.id,
+    const itemData = {
       title,
       url,
       description,
@@ -150,7 +150,18 @@ const AddEditListItem = ({ isOpen, onClose, onSave, item }: AddEditListItemProps
       completed: item?.completed || false,
       createdAt: item?.createdAt || new Date(),
       previewImage: item?.previewImage,
-    });
+    };
+
+    // If editing existing item, call onSave with the data
+    // If creating new item and listId is provided, create the item directly
+    if (item) {
+      onSave(itemData);
+    } else if (listId) {
+      const newItem = createItem(listId, itemData);
+      onSave(newItem);
+    } else {
+      onSave(itemData);
+    }
     
     onClose();
   };

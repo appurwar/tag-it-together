@@ -165,7 +165,7 @@ const ListsPage = () => {
         <SearchInput onSearch={handleSearch} placeholder="Search lists..." />
       </div>
 
-      <div className="mt-24 px-4">
+      <div className="mt-32 px-4">
         <div className="flex items-center justify-between mb-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
