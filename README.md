@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# Tag It Togehter 
 
 ## Project info
 
